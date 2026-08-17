@@ -16,15 +16,21 @@ import {
   Tag, 
   Copy, 
   Check, 
-  Sparkles,
-  Flame,
-  FileText
+  Sparkles, 
+  Flame, 
+  FileText,
+  BarChart3,
+  ShoppingBag,
+  ShieldCheck,
+  Zap,
+  Globe
 } from 'lucide-react';
 
 import { useProducts } from './hooks/useProducts';
 import DataTable from './components/DataTable';
 import Pagination from './components/Pagination';
 import ProductModal from './components/ProductModal';
+import OrdersPipeline from './components/OrdersPipeline';
 import StatCard from './components/StatCard';
 import ActionNeededPanel from './components/ActionNeededPanel';
 import Toast from './components/Toast';
@@ -61,6 +67,7 @@ export default function App() {
     warehouses
   } = useProducts(8);
 
+  const [activeView, setActiveView] = useState('products');
   const [selectedIds, setSelectedIds] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -99,7 +106,7 @@ export default function App() {
   const handleCopyCoupon = (code) => {
     navigator.clipboard.writeText(code);
     setCopiedCoupon(code);
-    showToast(`Coupon code "${code}" copied!`);
+    showToast(`Coupon "${code}" copied!`);
     setTimeout(() => setCopiedCoupon(''), 3000);
   };
 
@@ -108,9 +115,9 @@ export default function App() {
     if (pincode.length === 6 && !isNaN(pincode)) {
       setPincodeStatus({
         valid: true,
-        message: `Pincode ${pincode} Serviceable: Bluedart Air Express & Delhivery Active`
+        message: `Pincode ${pincode} Serviceable: Next-Day Express Delivery Active via Bluedart & Delhivery`
       });
-      showToast(`Pincode ${pincode} verified for next-day dispatch`);
+      showToast(`Pincode ${pincode} verified for 24hr courier handover`);
     } else {
       setPincodeStatus({
         valid: false,
@@ -152,18 +159,18 @@ export default function App() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `D2CMall_Products_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `D2CMall_Catalog_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
-    showToast('Product catalog exported to CSV successfully');
+    showToast('Product catalog exported to CSV');
   };
 
   const handleCSVImportSimulate = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    showToast(`Imported "${file.name}" (12 products mapped)`);
+    showToast(`Uploaded "${file.name}" — 12 products synced successfully`);
   };
 
   const selectedProductList = products.filter((p) => selectedIds.includes(p.id));
@@ -184,19 +191,21 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col font-sans">
+      
+      {/* 1. Live Top Bar */}
       <div className="bg-slate-900 text-slate-300 text-xs px-4 py-2 border-b border-slate-800">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-4 text-[11px]">
             <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
-              <MapPin size={12} /> Hubs: Pan-India (4 Active Warehouses)
+              <MapPin size={12} /> Hubs: 4 Multi-City Fulfillment Depots
             </span>
             <span className="text-slate-600 hidden sm:inline">|</span>
             <span className="text-amber-400 font-semibold flex items-center gap-1">
-              <AlertCircle size={12} /> Shiprocket NDR Auto-Sync Active
+              <AlertCircle size={12} /> NDR Action Sync Active
             </span>
             <span className="text-slate-600 hidden sm:inline">|</span>
             <span className="text-slate-400 flex items-center gap-1">
-              <Truck size={12} className="text-blue-400" /> Bluedart & Delhivery Integrated
+              <Truck size={12} className="text-blue-400" /> Bluedart, Delhivery & Shadowfax API Connected
             </span>
           </div>
 
@@ -210,6 +219,7 @@ export default function App() {
         </div>
       </div>
 
+      {/* 2. Main Executive Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -222,10 +232,10 @@ export default function App() {
                   D2C<span className="text-orange-500">Mall</span>
                 </span>
                 <span className="text-[10px] font-extrabold px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-md uppercase">
-                  Shiprocket Hub
+                  Shiprocket Unified
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 font-medium">Automated Logistics & Multi-Courier Fulfillment</p>
+              <p className="text-[11px] text-slate-400 font-medium">Omnichannel Catalog & Order Management Suite</p>
             </div>
           </div>
 
@@ -247,7 +257,7 @@ export default function App() {
                 setEditingProduct(null);
                 setIsModalOpen(true);
               }}
-              className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-bold text-xs sm:text-sm transition shadow-md shadow-orange-500/20 active:scale-98 cursor-pointer"
+              className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-extrabold text-xs sm:text-sm transition shadow-md shadow-orange-500/20 active:scale-98 cursor-pointer"
             >
               <Plus size={16} strokeWidth={3} /> Add Product
             </button>
@@ -255,6 +265,7 @@ export default function App() {
         </div>
       </header>
 
+      {/* 3. Welcome Banner & Pincode Checker */}
       <div className="bg-gradient-to-r from-orange-500 via-amber-500 to-emerald-600 text-white py-4 px-4 shadow-sm">
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3 text-center lg:text-left">
@@ -262,9 +273,9 @@ export default function App() {
               <Sparkles size={24} className="text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-black tracking-tight">Welcome to D2C Mall — India's Direct Commerce Portal</h2>
+              <h2 className="text-lg font-black tracking-tight">Welcome to D2C Mall — Direct Indian Commerce Suite</h2>
               <p className="text-xs text-orange-100 font-medium">
-                Integrated with Shiprocket Courier Engine for automatic AWB allocation and next-day deliveries
+                Live multi-channel synchronization across Shopify, Amazon, Flipkart, Myntra & Shiprocket Couriers
               </p>
             </div>
           </div>
@@ -274,16 +285,16 @@ export default function App() {
             <input
               type="text"
               maxLength={6}
-              placeholder="Check Courier Pincode..."
+              placeholder="Check Serviceable Pincode..."
               value={pincode}
               onChange={(e) => setPincode(e.target.value)}
-              className="bg-transparent text-white placeholder-orange-100 text-xs px-2 py-1 outline-none w-36 sm:w-44 font-semibold"
+              className="bg-transparent text-white placeholder-orange-100 text-xs px-2 py-1 outline-none w-40 sm:w-48 font-semibold"
             />
             <button
               type="submit"
               className="bg-white text-slate-900 hover:bg-orange-50 font-bold px-3 py-1.5 rounded-lg text-xs transition cursor-pointer shrink-0 shadow-xs"
             >
-              Check
+              Verify TAT
             </button>
           </form>
         </div>
@@ -295,10 +306,11 @@ export default function App() {
         )}
       </div>
 
+      {/* 4. Active Offers & Discounts Strip */}
       <div className="bg-white border-b border-slate-200 py-3 px-4">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs font-black text-slate-800 uppercase tracking-wider shrink-0">
-            <Flame size={16} className="text-orange-500" /> Active Deals & Coupons:
+            <Flame size={16} className="text-orange-500" /> Merchant Campaign Offers:
           </div>
 
           <div className="flex items-center gap-3 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
@@ -323,10 +335,13 @@ export default function App() {
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-5">
+      {/* 5. Main Dashboard Body */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
+        
+        {/* KPI Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
-            title="Total Active Products"
+            title="Total Active Catalog SKUs"
             value={total}
             icon={Package}
             color="blue"
@@ -338,7 +353,7 @@ export default function App() {
             <div className="flex justify-between items-start">
               <div>
                 <div className="flex items-center gap-1.5">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Revenue</p>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Gross Sales</p>
                   <select
                     value={revenuePeriod}
                     onChange={(e) => setRevenuePeriod(e.target.value)}
@@ -357,133 +372,222 @@ export default function App() {
               </div>
             </div>
             <div className="mt-3 text-xs font-bold text-emerald-600 flex items-center">
-              <TrendingUp size={14} className="mr-0.5" /> +{revenueValues[revenuePeriod].trend}% conversion rate
+              <TrendingUp size={14} className="mr-0.5" /> +{revenueValues[revenuePeriod].trend}% sales margin
             </div>
           </div>
 
           <StatCard
             title="Top Converting Category"
-            value="Beauty & Fashion"
+            value="Beauty & Apparel"
             icon={Layers}
             color="orange"
             subtitle="Rank #1 across 24 categories"
           />
 
           <StatCard
-            title="Courier Fulfillment SLA"
+            title="Fulfillment Handover SLA"
             value="98.8%"
             icon={Truck}
             color="emerald"
-            subtitle="Next-Day delivery compliance"
+            subtitle="Same-day manifest compliance"
           />
         </div>
 
+        {/* Shiprocket Orders & Fulfillment Pipeline */}
+        <OrdersPipeline totalProducts={total} />
+
+        {/* NDR Exceptions Panel */}
         <ActionNeededPanel
           products={products}
           onResolveNDR={resolveNDR}
         />
 
-        <div className="bg-white border border-slate-200 rounded-xl p-3 flex flex-col md:flex-row gap-3 items-center justify-between shadow-2xs">
-          <div className="relative w-full md:w-96">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input
-              type="text"
-              placeholder="Search products by name or brand..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-10 pr-4 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-600 transition font-medium"
-            />
-          </div>
-
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <select
-              value={category}
-              onChange={(e) => {
-                setCategory(e.target.value);
-                setPage(1);
-              }}
-              className="w-full md:w-56 bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-700 capitalize focus:outline-none focus:bg-white focus:border-orange-500 transition font-bold cursor-pointer"
+        {/* View Switcher Tabs */}
+        <div className="flex items-center justify-between border-b border-slate-200 pb-1">
+          <div className="flex items-center gap-6 text-xs font-extrabold text-slate-500">
+            <button
+              onClick={() => setActiveView('products')}
+              className={`pb-2 flex items-center gap-1.5 border-b-2 transition cursor-pointer ${
+                activeView === 'products'
+                  ? 'border-orange-500 text-orange-600'
+                  : 'border-transparent hover:text-slate-900'
+              }`}
             >
-              <option value="">All Store Categories ({categories.length})</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
+              <Package size={15} /> All Products Catalog ({total})
+            </button>
+            <button
+              onClick={() => setActiveView('analytics')}
+              className={`pb-2 flex items-center gap-1.5 border-b-2 transition cursor-pointer ${
+                activeView === 'analytics'
+                  ? 'border-orange-500 text-orange-600'
+                  : 'border-transparent hover:text-slate-900'
+              }`}
+            >
+              <BarChart3 size={15} /> Courier Performance Matrix
+            </button>
           </div>
         </div>
 
-        {selectedIds.length > 0 && (
-          <div className="bg-slate-900 text-white px-4 py-2.5 rounded-xl flex items-center justify-between text-xs animate-in fade-in slide-in-from-top-2 duration-150">
-            <span className="font-bold text-orange-400">
-              {selectedIds.length} {selectedIds.length === 1 ? 'product' : 'products'} selected
-            </span>
+        {activeView === 'products' && (
+          <div className="space-y-4">
+            {/* Search & Filter Toolbar */}
+            <div className="bg-white border border-slate-200 rounded-xl p-3 flex flex-col md:flex-row gap-3 items-center justify-between shadow-2xs">
+              <div className="relative w-full md:w-96">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <input
+                  type="text"
+                  placeholder="Search products by title, SKU or brand..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-10 pr-4 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-600 transition font-medium"
+                />
+              </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setIsManifestOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1 rounded-lg transition cursor-pointer flex items-center gap-1"
-              >
-                <FileText size={13} /> Generate Manifest
-              </button>
-
-              <select
-                onChange={(e) => {
-                  if (e.target.value) {
-                    bulkWarehouseReassign(selectedIds, e.target.value);
-                    e.target.value = '';
-                  }
-                }}
-                className="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1 text-xs outline-none cursor-pointer"
-              >
-                <option value="">Reassign Warehouse...</option>
-                {warehouses.map((w) => (
-                  <option key={w} value={w}>{w}</option>
-                ))}
-              </select>
-
-              <button
-                onClick={() => setIsBulkDeleteConfirmOpen(true)}
-                className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-3 py-1 rounded-lg transition cursor-pointer"
-              >
-                Delete Selected
-              </button>
+              <div className="flex items-center gap-3 w-full md:w-auto">
+                <select
+                  value={category}
+                  onChange={(e) => {
+                    setCategory(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full md:w-56 bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-700 capitalize focus:outline-none focus:bg-white focus:border-orange-500 transition font-bold cursor-pointer"
+                >
+                  <option value="">All Store Categories ({categories.length})</option>
+                  {categories.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
             </div>
+
+            {/* Bulk Action Toolbar */}
+            {selectedIds.length > 0 && (
+              <div className="bg-slate-900 text-white px-4 py-2.5 rounded-xl flex items-center justify-between text-xs animate-in fade-in slide-in-from-top-2 duration-150 shadow-md">
+                <span className="font-bold text-orange-400">
+                  {selectedIds.length} {selectedIds.length === 1 ? 'product' : 'products'} selected
+                </span>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setIsManifestOpen(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1 rounded-lg transition cursor-pointer flex items-center gap-1"
+                  >
+                    <FileText size={13} /> Generate Manifest ({selectedIds.length})
+                  </button>
+
+                  <select
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        bulkWarehouseReassign(selectedIds, e.target.value);
+                        e.target.value = '';
+                      }
+                    }}
+                    className="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1 text-xs outline-none cursor-pointer"
+                  >
+                    <option value="">Reassign Warehouse...</option>
+                    {warehouses.map((w) => (
+                      <option key={w} value={w}>{w}</option>
+                    ))}
+                  </select>
+
+                  <button
+                    onClick={() => setIsBulkDeleteConfirmOpen(true)}
+                    className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-3 py-1 rounded-lg transition cursor-pointer"
+                  >
+                    Delete Selected
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Reusable Data Table */}
+            <DataTable
+              products={products}
+              loading={loading}
+              error={error}
+              onRetry={retry}
+              onEdit={(product) => {
+                setEditingProduct(product);
+                setIsModalOpen(true);
+              }}
+              onDelete={(id) => setConfirmDeleteId(id)}
+              onTrack={(product) => setTrackingProduct(product)}
+              onCalculateRate={(product) => setCalculatingProduct(product)}
+              sortBy={sortBy}
+              order={order}
+              onSort={handleSort}
+              selectedIds={selectedIds}
+              onToggleSelect={handleToggleSelect}
+              onToggleSelectAll={handleToggleSelectAll}
+            />
+
+            {/* Server-Side Pagination */}
+            <Pagination
+              total={total}
+              limit={8}
+              currentPage={page}
+              onPageChange={setPage}
+            />
           </div>
         )}
 
-        <DataTable
-          products={products}
-          loading={loading}
-          error={error}
-          onRetry={retry}
-          onEdit={(product) => {
-            setEditingProduct(product);
-            setIsModalOpen(true);
-          }}
-          onDelete={(id) => setConfirmDeleteId(id)}
-          onTrack={(product) => setTrackingProduct(product)}
-          onCalculateRate={(product) => setCalculatingProduct(product)}
-          sortBy={sortBy}
-          order={order}
-          onSort={handleSort}
-          selectedIds={selectedIds}
-          onToggleSelect={handleToggleSelect}
-          onToggleSelectAll={handleToggleSelectAll}
-        />
+        {activeView === 'analytics' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-in fade-in duration-150">
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Courier SLA Delivery Rates</h4>
+              <div className="space-y-3 mt-4 text-xs">
+                {[
+                  { name: 'Bluedart Air', onTime: '98.2%', share: '45%' },
+                  { name: 'Delhivery Surface', onTime: '94.6%', share: '30%' },
+                  { name: 'Shadowfax Express', onTime: '92.1%', share: '15%' },
+                  { name: 'DTDC Premium', onTime: '89.4%', share: '10%' },
+                ].map((c, i) => (
+                  <div key={i} className="flex justify-between items-center py-1.5 border-b border-slate-100 last:border-0">
+                    <span className="font-bold text-slate-800">{c.name}</span>
+                    <span className="text-emerald-600 font-extrabold">{c.onTime} on-time</span>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-        <Pagination
-          total={total}
-          limit={8}
-          currentPage={page}
-          onPageChange={setPage}
-        />
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Channel Sales Share</h4>
+              <div className="space-y-3 mt-4 text-xs">
+                {[
+                  { name: 'Direct D2C Store', sales: '₹9.4 Lakh', share: '51%' },
+                  { name: 'Amazon India', sales: '₹4.8 Lakh', share: '26%' },
+                  { name: 'Myntra Mall', sales: '₹2.9 Lakh', share: '16%' },
+                  { name: 'Flipkart Hub', sales: '₹1.3 Lakh', share: '7%' },
+                ].map((ch, i) => (
+                  <div key={i} className="flex justify-between items-center py-1.5 border-b border-slate-100 last:border-0">
+                    <span className="font-bold text-slate-800">{ch.name}</span>
+                    <span className="text-blue-700 font-extrabold">{ch.sales} ({ch.share})</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Warehouse Handover SLA</h4>
+              <div className="space-y-3 mt-4 text-xs">
+                {warehouses.map((w, i) => (
+                  <div key={i} className="flex justify-between items-center py-1.5 border-b border-slate-100 last:border-0">
+                    <span className="font-bold text-slate-800">{w}</span>
+                    <span className="text-emerald-600 font-bold">100% Ready</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
+      {/* Modals */}
       <ManifestModal
         isOpen={isManifestOpen}
         onClose={() => setIsManifestOpen(false)}
         selectedProducts={selectedProductList}
-        onDownload={() => showToast(`Manifest generated for ${selectedIds.length} orders`)}
+        onDownload={() => showToast(`Pickup Manifest generated for ${selectedIds.length} orders`)}
       />
 
       <RateCalculatorModal
@@ -518,8 +622,8 @@ export default function App() {
 
       <ConfirmDialog
         isOpen={Boolean(confirmDeleteId)}
-        title="Remove Product from Store?"
-        message="This product will immediately be delisted from all storefront channels and warehouse pickup lists."
+        title="Delete Product from Catalog?"
+        message="This product will immediately be delisted from all D2C store channels and warehouse dispatch lists."
         confirmLabel="Delete Product"
         isDestructive
         onCancel={() => setConfirmDeleteId(null)}
