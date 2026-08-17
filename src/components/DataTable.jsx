@@ -1,4 +1,4 @@
-import { Edit2, Trash2, ArrowUpDown, Tag, Star, MapPin, AlertCircle, RefreshCw, Truck, Calculator, ShieldCheck } from 'lucide-react';
+import { Edit2, Trash2, ArrowUpDown, Tag, Star, MapPin, AlertCircle, RefreshCw, Truck, Calculator, Eye } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 
 export default function DataTable({
@@ -10,6 +10,7 @@ export default function DataTable({
   onDelete,
   onTrack,
   onCalculateRate,
+  onViewProduct,
   sortBy,
   order,
   onSort,
@@ -49,7 +50,7 @@ export default function DataTable({
                   Price (₹) {getSortIcon('price')}
                 </div>
               </th>
-              <th className="py-3 px-4 font-bold">Assigned Logistics Partner</th>
+              <th className="py-3 px-4 font-bold">Assigned Logistics</th>
               <th className="py-3 px-4 font-bold">Pickup Hub</th>
               <th className="py-3 px-4 font-bold cursor-pointer select-none" onClick={() => onSort('rating')}>
                 <div className="flex items-center gap-1 hover:text-slate-900">
@@ -113,7 +114,11 @@ export default function DataTable({
 
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-lg border border-slate-200 bg-white p-1 shrink-0 overflow-hidden flex items-center justify-center">
+                        <button
+                          onClick={() => onViewProduct(product)}
+                          className="w-11 h-11 rounded-lg border border-slate-200 bg-white p-1 shrink-0 overflow-hidden flex items-center justify-center hover:border-orange-400 transition cursor-pointer"
+                          title="Quick View"
+                        >
                           <img
                             src={product.thumbnail}
                             alt={product.title}
@@ -122,11 +127,14 @@ export default function DataTable({
                               e.target.src = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=150&q=80';
                             }}
                           />
-                        </div>
+                        </button>
                         <div className="max-w-xs">
-                          <div className="font-bold text-slate-900 text-xs line-clamp-1 hover:text-blue-600 transition">
+                          <button
+                            onClick={() => onViewProduct(product)}
+                            className="font-bold text-slate-900 text-xs line-clamp-1 hover:text-orange-600 text-left transition cursor-pointer"
+                          >
                             {product.title}
-                          </div>
+                          </button>
                           <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5">
                             <span className="font-semibold text-slate-700">{product.brand || 'D2C Direct'}</span>
                             <span>•</span>
@@ -182,6 +190,13 @@ export default function DataTable({
                     </td>
 
                     <td className="py-3.5 px-4 text-right space-x-1 whitespace-nowrap">
+                      <button
+                        onClick={() => onViewProduct(product)}
+                        className="p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-700 rounded-lg transition cursor-pointer"
+                        title="Quick View Details"
+                      >
+                        <Eye size={14} />
+                      </button>
                       <button
                         onClick={() => onCalculateRate(product)}
                         className="p-1.5 hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 rounded-lg transition cursor-pointer"

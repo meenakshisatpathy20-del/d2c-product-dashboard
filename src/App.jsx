@@ -6,12 +6,10 @@ import {
   TrendingUp, 
   Store, 
   MapPin, 
-  Clock, 
   IndianRupee, 
   Truck, 
   Download, 
   Upload, 
-  AlertCircle, 
   Layers, 
   Tag, 
   Copy, 
@@ -21,9 +19,7 @@ import {
   FileText,
   BarChart3,
   ShoppingBag,
-  ShieldCheck,
-  Zap,
-  Globe
+  Bell
 } from 'lucide-react';
 
 import { useProducts } from './hooks/useProducts';
@@ -38,6 +34,7 @@ import ConfirmDialog from './components/ConfirmDialog';
 import TrackingModal from './components/TrackingModal';
 import RateCalculatorModal from './components/RateCalculatorModal';
 import ManifestModal from './components/ManifestModal';
+import ProductDetailDrawer from './components/ProductDetailDrawer';
 
 export default function App() {
   const {
@@ -71,6 +68,7 @@ export default function App() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [viewingProduct, setViewingProduct] = useState(null);
   const [trackingProduct, setTrackingProduct] = useState(null);
   const [calculatingProduct, setCalculatingProduct] = useState(null);
   const [isManifestOpen, setIsManifestOpen] = useState(false);
@@ -79,16 +77,9 @@ export default function App() {
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
 
   const [revenuePeriod, setRevenuePeriod] = useState('Monthly');
-  const [currentTime, setCurrentTime] = useState(new Date());
-
   const [pincode, setPincode] = useState('');
   const [pincodeStatus, setPincodeStatus] = useState(null);
   const [copiedCoupon, setCopiedCoupon] = useState('');
-
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   const revenueValues = {
     Total: { val: '₹42.8 Lakh', trend: 18.2 },
@@ -115,7 +106,7 @@ export default function App() {
     if (pincode.length === 6 && !isNaN(pincode)) {
       setPincodeStatus({
         valid: true,
-        message: `Pincode ${pincode} Serviceable: Next-Day Express Delivery Active via Bluedart & Delhivery`
+        message: `Pincode ${pincode} Serviceable: Next-Day Express Delivery via Bluedart & Delhivery`
       });
       showToast(`Pincode ${pincode} verified for 24hr courier handover`);
     } else {
@@ -175,51 +166,10 @@ export default function App() {
 
   const selectedProductList = products.filter((p) => selectedIds.includes(p.id));
 
-  const formattedDate = currentTime.toLocaleDateString('en-IN', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric'
-  });
-
-  const formattedTime = currentTime.toLocaleTimeString('en-IN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: true
-  });
-
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col font-sans">
       
-      {/* 1. Live Top Bar */}
-      <div className="bg-slate-900 text-slate-300 text-xs px-4 py-2 border-b border-slate-800">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-4 text-[11px]">
-            <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
-              <MapPin size={12} /> Hubs: 4 Multi-City Fulfillment Depots
-            </span>
-            <span className="text-slate-600 hidden sm:inline">|</span>
-            <span className="text-amber-400 font-semibold flex items-center gap-1">
-              <AlertCircle size={12} /> NDR Action Sync Active
-            </span>
-            <span className="text-slate-600 hidden sm:inline">|</span>
-            <span className="text-slate-400 flex items-center gap-1">
-              <Truck size={12} className="text-blue-400" /> Bluedart, Delhivery & Shadowfax API Connected
-            </span>
-          </div>
-
-          <div className="flex items-center gap-3 font-medium text-[11px]">
-            <span>{formattedDate}</span>
-            <span className="text-slate-600">•</span>
-            <span className="flex items-center gap-1 text-orange-400 font-mono font-bold">
-              <Clock size={12} /> {formattedTime}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. Main Executive Header */}
+      {/* 1. Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -235,7 +185,7 @@ export default function App() {
                   Shiprocket Unified
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 font-medium">Omnichannel Catalog & Order Management Suite</p>
+              <p className="text-[11px] text-slate-400 font-medium">Omnichannel Catalog & Order Management</p>
             </div>
           </div>
 
@@ -265,7 +215,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* 3. Welcome Banner & Pincode Checker */}
+      {/* 2. Welcome Banner & Pincode Checker */}
       <div className="bg-gradient-to-r from-orange-500 via-amber-500 to-emerald-600 text-white py-4 px-4 shadow-sm">
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3 text-center lg:text-left">
@@ -306,7 +256,7 @@ export default function App() {
         )}
       </div>
 
-      {/* 4. Active Offers & Discounts Strip */}
+      {/* 3. Promotional Offers Strip */}
       <div className="bg-white border-b border-slate-200 py-3 px-4">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs font-black text-slate-800 uppercase tracking-wider shrink-0">
@@ -335,10 +285,10 @@ export default function App() {
         </div>
       </div>
 
-      {/* 5. Main Dashboard Body */}
+      {/* 4. Main Body */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
         
-        {/* KPI Summary Cards */}
+        {/* KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Total Active Catalog SKUs"
@@ -396,11 +346,44 @@ export default function App() {
         {/* Shiprocket Orders & Fulfillment Pipeline */}
         <OrdersPipeline totalProducts={total} />
 
-        {/* NDR Exceptions Panel */}
+        {/* NDR Exceptions Action Center */}
         <ActionNeededPanel
           products={products}
           onResolveNDR={resolveNDR}
         />
+
+        {/* Clean Ecommerce Category Pills */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+          <button
+            onClick={() => {
+              setCategory('');
+              setPage(1);
+            }}
+            className={`px-3.5 py-1.5 rounded-full font-bold transition shrink-0 cursor-pointer ${
+              category === ''
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            All Categories ({total})
+          </button>
+          {categories.slice(0, 8).map((c) => (
+            <button
+              key={c}
+              onClick={() => {
+                setCategory(c);
+                setPage(1);
+              }}
+              className={`px-3.5 py-1.5 rounded-full font-bold capitalize transition shrink-0 cursor-pointer ${
+                category === c
+                  ? 'bg-orange-500 text-white shadow-xs'
+                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
 
         {/* View Switcher Tabs */}
         <div className="flex items-center justify-between border-b border-slate-200 pb-1">
@@ -430,7 +413,6 @@ export default function App() {
 
         {activeView === 'products' && (
           <div className="space-y-4">
-            {/* Search & Filter Toolbar */}
             <div className="bg-white border border-slate-200 rounded-xl p-3 flex flex-col md:flex-row gap-3 items-center justify-between shadow-2xs">
               <div className="relative w-full md:w-96">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
@@ -443,24 +425,11 @@ export default function App() {
                 />
               </div>
 
-              <div className="flex items-center gap-3 w-full md:w-auto">
-                <select
-                  value={category}
-                  onChange={(e) => {
-                    setCategory(e.target.value);
-                    setPage(1);
-                  }}
-                  className="w-full md:w-56 bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-700 capitalize focus:outline-none focus:bg-white focus:border-orange-500 transition font-bold cursor-pointer"
-                >
-                  <option value="">All Store Categories ({categories.length})</option>
-                  {categories.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+              <div className="text-xs text-slate-500 font-semibold">
+                Click any product thumbnail or title for Customer Quick View
               </div>
             </div>
 
-            {/* Bulk Action Toolbar */}
             {selectedIds.length > 0 && (
               <div className="bg-slate-900 text-white px-4 py-2.5 rounded-xl flex items-center justify-between text-xs animate-in fade-in slide-in-from-top-2 duration-150 shadow-md">
                 <span className="font-bold text-orange-400">
@@ -500,7 +469,6 @@ export default function App() {
               </div>
             )}
 
-            {/* Reusable Data Table */}
             <DataTable
               products={products}
               loading={loading}
@@ -513,6 +481,7 @@ export default function App() {
               onDelete={(id) => setConfirmDeleteId(id)}
               onTrack={(product) => setTrackingProduct(product)}
               onCalculateRate={(product) => setCalculatingProduct(product)}
+              onViewProduct={(product) => setViewingProduct(product)}
               sortBy={sortBy}
               order={order}
               onSort={handleSort}
@@ -521,7 +490,6 @@ export default function App() {
               onToggleSelectAll={handleToggleSelectAll}
             />
 
-            {/* Server-Side Pagination */}
             <Pagination
               total={total}
               limit={8}
@@ -582,7 +550,19 @@ export default function App() {
         )}
       </main>
 
-      {/* Modals */}
+      {/* Quick View Drawer */}
+      <ProductDetailDrawer
+        isOpen={Boolean(viewingProduct)}
+        onClose={() => setViewingProduct(null)}
+        product={viewingProduct}
+        onEdit={(p) => {
+          setViewingProduct(null);
+          setEditingProduct(p);
+          setIsModalOpen(true);
+        }}
+      />
+
+      {/* Modals & Handlers */}
       <ManifestModal
         isOpen={isManifestOpen}
         onClose={() => setIsManifestOpen(false)}
