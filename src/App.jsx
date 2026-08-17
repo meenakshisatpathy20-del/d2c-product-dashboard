@@ -17,9 +17,7 @@ import {
   Sparkles, 
   Flame, 
   FileText,
-  BarChart3,
-  ShoppingBag,
-  Bell
+  BarChart3
 } from 'lucide-react';
 
 import { useProducts } from './hooks/useProducts';
@@ -35,6 +33,7 @@ import TrackingModal from './components/TrackingModal';
 import RateCalculatorModal from './components/RateCalculatorModal';
 import ManifestModal from './components/ManifestModal';
 import ProductDetailDrawer from './components/ProductDetailDrawer';
+import LiveSalesNotification from './components/LiveSalesNotification';
 
 export default function App() {
   const {
@@ -626,6 +625,9 @@ export default function App() {
           setIsBulkDeleteConfirmOpen(false);
         }}
       />
+
+      {/* Floating Live Purchase Notification */}
+      <LiveSalesNotification />
 
       <Toast toast={toast} onClose={clearToast} />
     </div>
