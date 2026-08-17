@@ -1,139 +1,165 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Plus, 
   Search, 
   Package, 
-  Layers, 
   TrendingUp, 
-  Store,
-  MapPin,
-  Clock,
-  IndianRupee,
-  Truck,
-  Percent,
+  Store, 
+  MapPin, 
+  Clock, 
+  IndianRupee, 
+  Truck, 
+  Download, 
+  Upload, 
+  AlertTriangle, 
+  Layers, 
+  Tag, 
+  Copy, 
+  Check, 
   Sparkles,
-  ShoppingBag
+  ShoppingBag,
+  Flame,
+  ArrowRight
 } from 'lucide-react';
 
-import { 
-  fetchProducts, 
-  fetchCategories, 
-  createProduct, 
-  updateProduct, 
-  deleteProduct 
-} from './services/api';
-
-import ProductTable from './components/ProductTable';
+import { useProducts } from './hooks/useProducts';
+import DataTable from './components/DataTable';
 import Pagination from './components/Pagination';
 import ProductModal from './components/ProductModal';
+import StatCard from './components/StatCard';
+import ActionNeededPanel from './components/ActionNeededPanel';
+import Toast from './components/Toast';
+import ConfirmDialog from './components/ConfirmDialog';
+import TrackingModal from './components/TrackingModal';
 
 export default function App() {
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const {
+    products,
+    categories,
+    total,
+    loading,
+    error,
+    page,
+    setPage,
+    search,
+    setSearch,
+    category,
+    setCategory,
+    sortBy,
+    order,
+    handleSort,
+    saveProduct,
+    removeProduct,
+    bulkRemove,
+    bulkWarehouseReassign,
+    retry,
+    toast,
+    clearToast,
+    showToast,
+    warehouses
+  } = useProducts(8);
 
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [sortBy, setSortBy] = useState('');
-  const [order, setOrder] = useState('asc');
-
+  const [selectedIds, setSelectedIds] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [trackingProduct, setTrackingProduct] = useState(null);
 
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
+
+  const [revenuePeriod, setRevenuePeriod] = useState('Monthly');
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  const LIMIT = 8;
+  const [pincode, setPincode] = useState('');
+  const [pincodeStatus, setPincodeStatus] = useState(null);
+  const [copiedCoupon, setCopiedCoupon] = useState('');
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  const loadCategories = async () => {
-    try {
-      const data = await fetchCategories();
-      setCategories(data);
-    } catch (err) {
-      console.error(err);
-    }
+  const revenueValues = {
+    Total: { val: '₹42.8 Lakh', trend: 18.2 },
+    Monthly: { val: '₹6.45 Lakh', trend: 14.5 },
+    Weekly: { val: '₹1.52 Lakh', trend: 8.3 },
+    Yearly: { val: '₹51.2 Lakh', trend: 22.1 },
   };
 
-  const loadProducts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const skip = (page - 1) * LIMIT;
-      const data = await fetchProducts({
-        limit: LIMIT,
-        skip,
-        search,
-        category: selectedCategory,
-        sortBy,
-        order,
+  const coupons = [
+    { code: 'D2CFESTIVE', off: 'FLAT ₹200 OFF', min: 'Orders ₹999+', tag: 'Trending' },
+    { code: 'FREESHIP', off: 'FREE PAN-INDIA DELIVERY', min: 'No min. order', tag: 'Fast Delivery' },
+    { code: 'MYNTRA50', off: 'EXTRA 15% OFF', min: 'Fashion & Beauty', tag: 'Limited' },
+  ];
+
+  const handleCopyCoupon = (code) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCoupon(code);
+    showToast(`Coupon code "${code}" copied to clipboard!`);
+    setTimeout(() => setCopiedCoupon(''), 3000);
+  };
+
+  const handleCheckPincode = (e) => {
+    e.preventDefault();
+    if (pincode.length === 6 && !isNaN(pincode)) {
+      setPincodeStatus({
+        valid: true,
+        message: `Pincode ${pincode} Eligible: Next-Day Express Delivery Active (Bluedart/Delhivery)`
       });
-      setProducts(data.products || []);
-      setTotal(data.total || 0);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, search, selectedCategory, sortBy, order]);
-
-  useEffect(() => {
-    loadCategories();
-  }, []);
-
-  useEffect(() => {
-    loadProducts();
-  }, [loadProducts]);
-
-  const handleSearchChange = (e) => {
-    setSearch(e.target.value);
-    setPage(1);
-  };
-
-  const handleCategoryChange = (e) => {
-    setSelectedCategory(e.target.value);
-    setPage(1);
-  };
-
-  const handleSort = (field) => {
-    if (sortBy === field) {
-      setOrder(order === 'asc' ? 'desc' : 'asc');
+      showToast(`Pincode ${pincode} verified for 24hr delivery`);
     } else {
-      setSortBy(field);
-      setOrder('asc');
+      setPincodeStatus({
+        valid: false,
+        message: 'Please enter a valid 6-digit Indian Postal Pincode'
+      });
     }
   };
 
-  const handleSaveProduct = async (formData) => {
-    try {
-      if (editingProduct) {
-        await updateProduct(editingProduct.id, formData);
-        setProducts(products.map(p => p.id === editingProduct.id ? { ...p, ...formData } : p));
-      } else {
-        const res = await createProduct(formData);
-        setProducts([{ ...res, id: Date.now() }, ...products]);
-        setTotal(t => t + 1);
-      }
-      setIsModalOpen(false);
-      setEditingProduct(null);
-    } catch (err) {
-      console.error(err);
+  const handleToggleSelect = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleSelectAll = (isChecked) => {
+    if (isChecked) {
+      setSelectedIds(products.map((p) => p.id));
+    } else {
+      setSelectedIds([]);
     }
   };
 
-  const handleDeleteProduct = async (id) => {
-    if (!confirm('Are you sure you want to remove this item from the D2C Mall?')) return;
-    try {
-      await deleteProduct(id);
-      setProducts(products.filter(p => p.id !== id));
-      setTotal(t => t - 1);
-    } catch (err) {
-      console.error(err);
-    }
+  const handleCSVExport = () => {
+    const exportData = products.map((p) => ({
+      ID: p.id,
+      SKU: p.sku,
+      Title: p.title,
+      Brand: p.brand,
+      Category: p.category,
+      PriceINR: p.priceINR,
+      WeightKg: p.weight,
+      Warehouse: p.warehouse
+    }));
+
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      [Object.keys(exportData[0]).join(','), ...exportData.map((e) => Object.values(e).join(','))].join('\n');
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `D2CMall_Catalog_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    showToast('Catalog exported to CSV successfully');
+  };
+
+  const handleCSVImportSimulate = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    showToast(`Bulk imported file: "${file.name}" (12 new SKUs mapped)`);
   };
 
   const formattedDate = currentTime.toLocaleDateString('en-IN', {
@@ -152,28 +178,34 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col font-sans">
-      <div className="bg-slate-900 text-slate-300 text-xs px-4 py-1.5 border-b border-slate-800">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
-              <MapPin size={13} /> Hub Location: India (IN) • Express Pincodes Active
+      {/* 1. Live Top Bar */}
+      <div className="bg-slate-900 text-slate-300 text-xs px-4 py-2 border-b border-slate-800">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-4 text-[11px]">
+            <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
+              <MapPin size={12} /> Hubs: Pan-India (4 Active Warehouses)
             </span>
-            <span className="hidden md:inline text-slate-600">|</span>
-            <span className="hidden md:flex items-center gap-1 text-slate-400">
-              <Truck size={13} className="text-orange-400" /> Free Pan-India Delivery on Orders ₹499+
+            <span className="text-slate-600 hidden sm:inline">|</span>
+            <span className="text-amber-400 font-semibold flex items-center gap-1">
+              <AlertTriangle size={12} /> 2 Courier Weight Disputes
+            </span>
+            <span className="text-slate-600 hidden sm:inline">|</span>
+            <span className="text-slate-400 flex items-center gap-1">
+              <Truck size={12} className="text-blue-400" /> Bluedart & Delhivery Integrated
             </span>
           </div>
 
-          <div className="flex items-center gap-3 font-medium">
-            <span className="text-slate-300">{formattedDate}</span>
+          <div className="flex items-center gap-3 font-medium text-[11px]">
+            <span>{formattedDate}</span>
             <span className="text-slate-600">•</span>
-            <span className="flex items-center gap-1 text-amber-400 font-mono font-bold">
-              <Clock size={13} /> {formattedTime}
+            <span className="flex items-center gap-1 text-orange-400 font-mono font-bold">
+              <Clock size={12} /> {formattedTime}
             </span>
           </div>
         </div>
       </div>
 
+      {/* 2. Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -186,109 +218,198 @@ export default function App() {
                   D2C<span className="text-orange-500">Mall</span>
                 </span>
                 <span className="text-[10px] font-extrabold px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-md uppercase">
-                  Marketplace Hub
+                  One Stop Lifestyle Shop
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 font-medium">Customer & Seller Direct Commercials</p>
+              <p className="text-[11px] text-slate-400 font-medium">Direct-to-Consumer Seller & Buyer Ecosystem</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <label className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition cursor-pointer">
+              <Upload size={14} /> <span className="hidden sm:inline">Bulk CSV</span>
+              <input type="file" accept=".csv" onChange={handleCSVImportSimulate} className="hidden" />
+            </label>
+
+            <button
+              onClick={handleCSVExport}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition cursor-pointer"
+            >
+              <Download size={14} /> <span className="hidden sm:inline">Export</span>
+            </button>
+
             <button
               onClick={() => {
                 setEditingProduct(null);
                 setIsModalOpen(true);
               }}
-              className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-bold text-xs sm:text-sm transition shadow-md shadow-orange-500/20 active:scale-98 cursor-pointer"
+              className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-bold text-xs sm:text-sm transition shadow-md shadow-orange-500/20 active:scale-98 cursor-pointer"
             >
-              <Plus size={16} strokeWidth={3} /> Add New Listing
+              <Plus size={16} strokeWidth={3} /> Add SKU
             </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-2xs">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Live Catalog Items</p>
-                <p className="text-2xl font-black text-slate-900 mt-1">{total}</p>
-              </div>
-              <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl border border-blue-100">
-                <Package size={20} />
-              </div>
+      {/* 3. Welcome Banner & Pincode Checker Bar */}
+      <div className="bg-gradient-to-r from-orange-500 via-amber-500 to-emerald-600 text-white py-4 px-4 shadow-sm">
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3 text-center lg:text-left">
+            <div className="p-2.5 bg-white/20 backdrop-blur-md rounded-2xl shrink-0 hidden sm:flex">
+              <Sparkles size={24} className="text-white" />
             </div>
-            <div className="mt-3 flex items-center text-xs text-blue-600 font-semibold">
-              <Sparkles size={14} className="mr-1" /> 100% Genuine D2C Brands
+            <div>
+              <h2 className="text-lg font-black tracking-tight">Welcome to D2C Mall — India's Direct Commerce Portal</h2>
+              <p className="text-xs text-orange-100 font-medium">
+                Syncing 100+ Authentic Lifestyle, Fashion & Tech Brands direct from verified manufacturers
+              </p>
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-2xs">
+          <form onSubmit={handleCheckPincode} className="flex items-center gap-2 bg-white/10 backdrop-blur-md p-1.5 rounded-xl border border-white/30 w-full sm:w-auto">
+            <MapPin size={16} className="text-white ml-2 shrink-0" />
+            <input
+              type="text"
+              maxLength={6}
+              placeholder="Check Delivery Pincode..."
+              value={pincode}
+              onChange={(e) => setPincode(e.target.value)}
+              className="bg-transparent text-white placeholder-orange-100 text-xs px-2 py-1 outline-none w-36 sm:w-44 font-semibold"
+            />
+            <button
+              type="submit"
+              className="bg-white text-slate-900 hover:bg-orange-50 font-bold px-3 py-1.5 rounded-lg text-xs transition cursor-pointer shrink-0 shadow-xs"
+            >
+              Check
+            </button>
+          </form>
+        </div>
+
+        {pincodeStatus && (
+          <div className={`max-w-7xl mx-auto mt-2 text-xs font-bold px-3 py-1.5 rounded-lg ${pincodeStatus.valid ? 'bg-emerald-950/40 text-emerald-200' : 'bg-rose-950/40 text-rose-200'}`}>
+            {pincodeStatus.message}
+          </div>
+        )}
+      </div>
+
+      {/* 4. Live Offers / Coupon Strip (Zomato / Myntra Style) */}
+      <div className="bg-white border-b border-slate-200 py-3 px-4">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs font-black text-slate-800 uppercase tracking-wider shrink-0">
+            <Flame size={16} className="text-orange-500" /> Active Deals & Coupons:
+          </div>
+
+          <div className="flex items-center gap-3 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
+            {coupons.map((c) => (
+              <div
+                key={c.code}
+                onClick={() => handleCopyCoupon(c.code)}
+                className="flex items-center gap-2 bg-orange-50/70 hover:bg-orange-100/80 border border-orange-200 border-dashed rounded-lg px-3 py-1.5 transition cursor-pointer shrink-0"
+              >
+                <Tag size={13} className="text-orange-600" />
+                <span className="text-xs font-black text-orange-950 font-mono">{c.code}</span>
+                <span className="text-[11px] font-bold text-orange-700">• {c.off}</span>
+                <span className="text-[10px] text-slate-400">({c.min})</span>
+                {copiedCoupon === c.code ? (
+                  <Check size={13} className="text-emerald-600 ml-1" />
+                ) : (
+                  <Copy size={13} className="text-slate-400 ml-1" />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 5. Main Body */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-5">
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            title="Total Active SKUs"
+            value={total}
+            icon={Package}
+            color="blue"
+            trend={12.4}
+            trendLabel="vs last month"
+          />
+
+          <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-2xs flex flex-col justify-between">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Avg. Indian Basket Size</p>
-                <p className="text-2xl font-black text-emerald-600 mt-1">₹1,840</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Revenue</p>
+                  <select
+                    value={revenuePeriod}
+                    onChange={(e) => setRevenuePeriod(e.target.value)}
+                    className="text-[11px] font-bold text-slate-600 bg-slate-100 rounded px-1.5 py-0.5 outline-none cursor-pointer"
+                  >
+                    <option value="Total">Total</option>
+                    <option value="Monthly">Monthly</option>
+                    <option value="Weekly">Weekly</option>
+                    <option value="Yearly">Yearly</option>
+                  </select>
+                </div>
+                <p className="text-2xl font-black text-emerald-600 mt-1">{revenueValues[revenuePeriod].val}</p>
               </div>
-              <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100">
+              <div className="p-2.5 rounded-xl border bg-emerald-50 text-emerald-600 border-emerald-100">
                 <IndianRupee size={20} />
               </div>
             </div>
-            <div className="mt-3 flex items-center text-xs text-emerald-600 font-semibold">
-              <TrendingUp size={14} className="mr-0.5" /> +14.2% festive surge
+            <div className="mt-3 text-xs font-bold text-emerald-600 flex items-center">
+              <TrendingUp size={14} className="mr-0.5" /> +{revenueValues[revenuePeriod].trend}% conversion rate
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-2xs">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Store Categories</p>
-                <p className="text-2xl font-black text-orange-600 mt-1">{categories.length}</p>
-              </div>
-              <div className="p-2.5 bg-orange-50 text-orange-600 rounded-xl border border-orange-100">
-                <Layers size={20} />
-              </div>
-            </div>
-            <div className="mt-3 flex items-center text-xs text-slate-500 font-medium">
-              Fashion, Electronics, Home & Beauty
-            </div>
-          </div>
+          <StatCard
+            title="Top Converting Category"
+            value="Beauty & Fashion"
+            icon={Layers}
+            color="orange"
+            subtitle="Rank #1 across 24 categories"
+          />
 
-          <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-2xs">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Avg. Customer Discount</p>
-                <p className="text-2xl font-black text-blue-700 mt-1">18.5%</p>
-              </div>
-              <div className="p-2.5 bg-blue-50 text-blue-700 rounded-xl border border-blue-100">
-                <Percent size={20} />
-              </div>
-            </div>
-            <div className="mt-3 flex items-center text-xs text-slate-500 font-medium">
-              Direct-from-factory savings
-            </div>
-          </div>
+          <StatCard
+            title="Weight Dispute Flag"
+            value="2 Items"
+            icon={AlertTriangle}
+            color="rose"
+            subtitle="Action required on courier charges"
+          />
         </div>
 
+        {/* Action-Needed Operational Bar */}
+        <ActionNeededPanel
+          products={products}
+          onSelectProduct={(p) => {
+            setEditingProduct(p);
+            setIsModalOpen(true);
+          }}
+        />
+
+        {/* Search & Category Filter */}
         <div className="bg-white border border-slate-200 rounded-xl p-3 flex flex-col md:flex-row gap-3 items-center justify-between shadow-2xs">
           <div className="relative w-full md:w-96">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input
               type="text"
-              placeholder="Search products by brand, title, or keyword..."
+              placeholder="Search catalog by SKU, title or brand..."
               value={search}
-              onChange={handleSearchChange}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-10 pr-4 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 transition"
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-10 pr-4 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-600 transition font-medium"
             />
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto">
             <select
-              value={selectedCategory}
-              onChange={handleCategoryChange}
-              className="w-full md:w-56 bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-sm text-slate-700 capitalize focus:outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition font-medium"
+              value={category}
+              onChange={(e) => {
+                setCategory(e.target.value);
+                setPage(1);
+              }}
+              className="w-full md:w-56 bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-700 capitalize focus:outline-none focus:bg-white focus:border-orange-500 transition font-bold cursor-pointer"
             >
-              <option value="">All Categories</option>
+              <option value="">All Store Categories ({categories.length})</option>
               {categories.map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
@@ -296,37 +417,125 @@ export default function App() {
           </div>
         </div>
 
-        <ProductTable
+        {/* Floating Bulk Actions Bar */}
+        {selectedIds.length > 0 && (
+          <div className="bg-slate-900 text-white px-4 py-2.5 rounded-xl flex items-center justify-between text-xs animate-in fade-in slide-in-from-top-2 duration-150">
+            <span className="font-bold text-orange-400">
+              {selectedIds.length} {selectedIds.length === 1 ? 'item' : 'items'} selected
+            </span>
+
+            <div className="flex items-center gap-2">
+              <select
+                onChange={(e) => {
+                  if (e.target.value) {
+                    bulkWarehouseReassign(selectedIds, e.target.value);
+                    e.target.value = '';
+                  }
+                }}
+                className="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1 text-xs outline-none cursor-pointer"
+              >
+                <option value="">Move to Warehouse...</option>
+                {warehouses.map((w) => (
+                  <option key={w} value={w}>{w}</option>
+                ))}
+              </select>
+
+              <button
+                onClick={() => setIsBulkDeleteConfirmOpen(true)}
+                className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-3 py-1 rounded-lg transition cursor-pointer"
+              >
+                Delist Selected
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Reusable Data Table with Live Track trigger */}
+        <DataTable
           products={products}
           loading={loading}
+          error={error}
+          onRetry={retry}
           onEdit={(product) => {
             setEditingProduct(product);
             setIsModalOpen(true);
           }}
-          onDelete={handleDeleteProduct}
+          onDelete={(id) => setConfirmDeleteId(id)}
+          onTrack={(product) => setTrackingProduct(product)}
           sortBy={sortBy}
           order={order}
           onSort={handleSort}
+          selectedIds={selectedIds}
+          onToggleSelect={handleToggleSelect}
+          onToggleSelectAll={handleToggleSelectAll}
         />
 
+        {/* Server-Side Pagination */}
         <Pagination
           total={total}
-          limit={LIMIT}
+          limit={8}
           currentPage={page}
           onPageChange={setPage}
         />
       </main>
 
+      {/* Tracking Modal */}
+      <TrackingModal
+        isOpen={Boolean(trackingProduct)}
+        onClose={() => setTrackingProduct(null)}
+        product={trackingProduct}
+      />
+
+      {/* Product Create / Edit Modal */}
       <ProductModal
         isOpen={isModalOpen}
         onClose={() => {
           setIsModalOpen(false);
           setEditingProduct(null);
         }}
-        onSubmit={handleSaveProduct}
+        onSubmit={async (formData) => {
+          const success = await saveProduct(formData, editingProduct?.id);
+          if (success) {
+            setIsModalOpen(false);
+            setEditingProduct(null);
+          }
+        }}
         initialData={editingProduct}
         categories={categories}
+        warehouses={warehouses}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={Boolean(confirmDeleteId)}
+        title="Delist SKU from Marketplace?"
+        message="This item will immediately be removed from the active inventory catalog across courier hubs."
+        confirmLabel="Delist Item"
+        isDestructive
+        onCancel={() => setConfirmDeleteId(null)}
+        onConfirm={() => {
+          removeProduct(confirmDeleteId);
+          setConfirmDeleteId(null);
+        }}
+      />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={isBulkDeleteConfirmOpen}
+        title={`Delist ${selectedIds.length} Selected SKUs?`}
+        message="Are you sure you want to delist all selected products? This action updates your live marketplace channel instantly."
+        confirmLabel={`Delist ${selectedIds.length} Items`}
+        isDestructive
+        onCancel={() => setIsBulkDeleteConfirmOpen(false)}
+        onConfirm={() => {
+          bulkRemove(selectedIds);
+          setSelectedIds([]);
+          setIsBulkDeleteConfirmOpen(false);
+        }}
+      />
+
+      {/* Toast Notification Container */}
+      <Toast toast={toast} onClose={clearToast} />
     </div>
   );
 }
