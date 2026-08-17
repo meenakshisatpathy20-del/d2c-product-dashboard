@@ -1,4 +1,4 @@
-import { Edit2, Trash2, ArrowUpDown, Tag, Star, Scale, MapPin, AlertCircle, RefreshCw, Truck } from 'lucide-react';
+import { Edit2, Trash2, ArrowUpDown, Tag, Star, MapPin, AlertCircle, RefreshCw, Truck, Calculator, ShieldCheck } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 
 export default function DataTable({
@@ -9,6 +9,7 @@ export default function DataTable({
   onEdit,
   onDelete,
   onTrack,
+  onCalculateRate,
   sortBy,
   order,
   onSort,
@@ -37,7 +38,7 @@ export default function DataTable({
                   className="rounded border-slate-300 text-orange-500 focus:ring-orange-500 cursor-pointer"
                 />
               </th>
-              <th className="py-3 px-4 font-bold">Catalog SKU & Brand</th>
+              <th className="py-3 px-4 font-bold">Product & Brand</th>
               <th className="py-3 px-4 font-bold cursor-pointer select-none" onClick={() => onSort('category')}>
                 <div className="flex items-center gap-1 hover:text-slate-900">
                   Category {getSortIcon('category')}
@@ -48,7 +49,7 @@ export default function DataTable({
                   Price (₹) {getSortIcon('price')}
                 </div>
               </th>
-              <th className="py-3 px-4 font-bold">Weight & Dispatch</th>
+              <th className="py-3 px-4 font-bold">Assigned Logistics Partner</th>
               <th className="py-3 px-4 font-bold">Pickup Hub</th>
               <th className="py-3 px-4 font-bold cursor-pointer select-none" onClick={() => onSort('rating')}>
                 <div className="flex items-center gap-1 hover:text-slate-900">
@@ -87,7 +88,7 @@ export default function DataTable({
                 <td colSpan={8} className="py-16 text-center text-slate-500">
                   <div className="flex flex-col items-center justify-center gap-2">
                     <AlertCircle size={28} className="text-orange-400" />
-                    <span className="font-semibold text-xs">No catalog listings match your criteria.</span>
+                    <span className="font-semibold text-xs">No products match your criteria.</span>
                   </div>
                 </td>
               </tr>
@@ -157,13 +158,12 @@ export default function DataTable({
 
                     <td className="py-3.5 px-4">
                       <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-1 text-xs font-semibold text-slate-700">
-                          <Scale size={12} className="text-slate-400" />
-                          <span>{product.weight} kg</span>
-                        </div>
-                        {product.hasDiscrepancy && (
-                          <StatusBadge type="discrepancy" status={(product.actualWeight - product.weight).toFixed(2)} />
-                        )}
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-blue-700">
+                          <Truck size={12} /> {product.preferredCourier}
+                        </span>
+                        <span className="text-[10px] font-semibold text-emerald-600">
+                          {product.dispatchMode}
+                        </span>
                       </div>
                     </td>
 
@@ -183,6 +183,13 @@ export default function DataTable({
 
                     <td className="py-3.5 px-4 text-right space-x-1 whitespace-nowrap">
                       <button
+                        onClick={() => onCalculateRate(product)}
+                        className="p-1.5 hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 rounded-lg transition cursor-pointer"
+                        title="Calculate Shipping Rate"
+                      >
+                        <Calculator size={14} />
+                      </button>
+                      <button
                         onClick={() => onTrack(product)}
                         className="p-1.5 hover:bg-orange-50 text-slate-400 hover:text-orange-600 rounded-lg transition cursor-pointer"
                         title="Track Delivery Status"
@@ -199,7 +206,7 @@ export default function DataTable({
                       <button
                         onClick={() => onDelete(product.id)}
                         className="p-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition cursor-pointer"
-                        title="Delist SKU"
+                        title="Delete Product"
                       >
                         <Trash2 size={14} />
                       </button>

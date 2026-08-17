@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Sparkles, Image as ImageIcon, Scale, Tag, Info } from 'lucide-react';
+import { X, Tag, Info, Image as ImageIcon, Truck, ShieldCheck } from 'lucide-react';
 import FormField from './FormField';
 
 export default function ProductModal({ isOpen, onClose, onSubmit, initialData, categories, warehouses }) {
@@ -9,12 +9,10 @@ export default function ProductModal({ isOpen, onClose, onSubmit, initialData, c
     category: '',
     priceINR: '',
     discountPercentage: '',
-    weight: '0.45',
-    dimensionsLength: '20',
-    dimensionsWidth: '15',
-    dimensionsHeight: '8',
     warehouse: '',
     thumbnail: '',
+    preferredCourier: 'Bluedart Surface',
+    dispatchMode: 'Express Air',
     status: 'Published'
   });
 
@@ -29,12 +27,10 @@ export default function ProductModal({ isOpen, onClose, onSubmit, initialData, c
         category: initialData.category || categories[0] || 'beauty',
         priceINR: initialData.priceINR || Math.round(initialData.price * 83),
         discountPercentage: initialData.discountPercentage || '10',
-        weight: initialData.weight || '0.45',
-        dimensionsLength: initialData.dimensions?.length || '20',
-        dimensionsWidth: initialData.dimensions?.width || '15',
-        dimensionsHeight: initialData.dimensions?.height || '8',
         warehouse: initialData.warehouse || warehouses[0],
         thumbnail: initialData.thumbnail || '',
+        preferredCourier: initialData.preferredCourier || 'Bluedart Surface',
+        dispatchMode: initialData.dispatchMode || 'Express Air',
         status: initialData.status || 'Published'
       });
     } else {
@@ -44,12 +40,10 @@ export default function ProductModal({ isOpen, onClose, onSubmit, initialData, c
         category: categories[0] || 'beauty',
         priceINR: '',
         discountPercentage: '10',
-        weight: '0.45',
-        dimensionsLength: '20',
-        dimensionsWidth: '15',
-        dimensionsHeight: '8',
         warehouse: warehouses[0] || 'Bhiwandi Hub (MH)',
         thumbnail: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80',
+        preferredCourier: 'Bluedart Surface',
+        dispatchMode: 'Express Air',
         status: 'Published'
       });
     }
@@ -67,10 +61,8 @@ export default function ProductModal({ isOpen, onClose, onSubmit, initialData, c
       err = 'Price must be greater than ₹0.';
     } else if (name === 'discountPercentage' && (parseFloat(value) < 0 || parseFloat(value) > 90)) {
       err = 'Discount must be between 0% and 90%.';
-    } else if (name === 'weight' && (!value || parseFloat(value) <= 0)) {
-      err = 'Enter a valid weight in kg.';
     } else if (name === 'thumbnail' && value && !value.match(/^https?:\/\/.+/i)) {
-      err = 'Enter a valid URL starting with http:// or https://';
+      err = 'Enter a valid image URL starting with http:// or https://';
     }
     return err;
   };
@@ -93,7 +85,6 @@ export default function ProductModal({ isOpen, onClose, onSubmit, initialData, c
     formData.title.trim().length >= 3 &&
     formData.brand.trim().length >= 2 &&
     parseFloat(formData.priceINR) > 0 &&
-    parseFloat(formData.weight) > 0 &&
     !Object.values(errors).some(Boolean);
 
   const priceNum = parseFloat(formData.priceINR) || 0;
@@ -111,13 +102,9 @@ export default function ProductModal({ isOpen, onClose, onSubmit, initialData, c
       priceINR: priceNum,
       price: priceNum / 83,
       discountPercentage: discountNum,
-      weight: parseFloat(formData.weight),
-      dimensions: {
-        length: parseFloat(formData.dimensionsLength) || 10,
-        width: parseFloat(formData.dimensionsWidth) || 10,
-        height: parseFloat(formData.dimensionsHeight) || 5,
-      },
       warehouse: formData.warehouse,
+      preferredCourier: formData.preferredCourier,
+      dispatchMode: formData.dispatchMode,
       thumbnail: formData.thumbnail,
       status: formData.status
     });
@@ -131,9 +118,9 @@ export default function ProductModal({ isOpen, onClose, onSubmit, initialData, c
         <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50 shrink-0">
           <div>
             <h2 className="text-base font-bold text-slate-900">
-              {initialData ? 'Update SKU Specification' : 'Add New SKU — Shiprocket/D2C Mall'}
+              {initialData ? 'Edit Product Details' : 'Add New Product to Store'}
             </h2>
-            <p className="text-xs text-slate-500">Structured catalog listing with courier calculation dimensions</p>
+            <p className="text-xs text-slate-500">Configure catalog information & Shiprocket automated dispatch rules</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer">
             <X size={18} />
@@ -141,16 +128,15 @@ export default function ProductModal({ isOpen, onClose, onSubmit, initialData, c
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto flex-1">
-          {/* Section 1: Basic Information */}
           <div className="space-y-3">
             <h3 className="text-xs font-extrabold text-blue-700 uppercase tracking-wider flex items-center gap-1.5">
-              <Tag size={13} /> 1. Basic Catalog Information
+              <Tag size={13} /> 1. Product Catalog Information
             </h3>
             
-            <FormField label="Product Title" required error={touched.title && errors.title}>
+            <FormField label="Product Name / Title" required error={touched.title && errors.title}>
               <input
                 type="text"
-                placeholder="e.g. Slim Fit Cotton Oxford Shirt"
+                placeholder="e.g. Pure Cotton Casual Shirt"
                 value={formData.title}
                 onChange={(e) => handleChange('title', e.target.value)}
                 onBlur={() => handleBlur('title')}
@@ -184,14 +170,13 @@ export default function ProductModal({ isOpen, onClose, onSubmit, initialData, c
             </div>
           </div>
 
-          {/* Section 2: Pricing & Live Calculation */}
           <div className="space-y-3 pt-3 border-t border-slate-100">
             <h3 className="text-xs font-extrabold text-orange-600 uppercase tracking-wider flex items-center gap-1.5">
-              <Info size={13} /> 2. Commercial Pricing & Discounts
+              <Info size={13} /> 2. Pricing & Customer Commercials
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <FormField label="Listing Price (₹ INR)" required error={touched.priceINR && errors.priceINR}>
+              <FormField label="Base Price (₹ INR)" required error={touched.priceINR && errors.priceINR}>
                 <input
                   type="number"
                   placeholder="1499"
@@ -202,7 +187,7 @@ export default function ProductModal({ isOpen, onClose, onSubmit, initialData, c
                 />
               </FormField>
 
-              <FormField label="Discount (%)" error={touched.discountPercentage && errors.discountPercentage}>
+              <FormField label="Customer Discount (%)" error={touched.discountPercentage && errors.discountPercentage}>
                 <input
                   type="number"
                   placeholder="15"
@@ -223,67 +208,50 @@ export default function ProductModal({ isOpen, onClose, onSubmit, initialData, c
             </div>
           </div>
 
-          {/* Section 3: Weight & Dimensions */}
           <div className="space-y-3 pt-3 border-t border-slate-100">
             <h3 className="text-xs font-extrabold text-emerald-700 uppercase tracking-wider flex items-center gap-1.5">
-              <Scale size={13} /> 3. Shipping Weight & Package Dimensions (L × W × H cm)
+              <Truck size={13} /> 3. Shiprocket Dispatch & Fulfillment Hub
             </h3>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              <FormField label="Dead Weight (kg)" required error={touched.weight && errors.weight}>
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="0.45"
-                  value={formData.weight}
-                  onChange={(e) => handleChange('weight', e.target.value)}
-                  onBlur={() => handleBlur('weight')}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-medium focus:border-emerald-600 outline-none"
-                />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <FormField label="Pickup Hub">
+                <select
+                  value={formData.warehouse}
+                  onChange={(e) => handleChange('warehouse', e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:border-blue-600 outline-none font-medium text-slate-800"
+                >
+                  {warehouses.map((w) => (
+                    <option key={w} value={w}>{w}</option>
+                  ))}
+                </select>
               </FormField>
 
-              <FormField label="Length (cm)">
-                <input
-                  type="number"
-                  value={formData.dimensionsLength}
-                  onChange={(e) => handleChange('dimensionsLength', e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs focus:border-blue-600 outline-none"
-                />
+              <FormField label="Default Courier Partner">
+                <select
+                  value={formData.preferredCourier}
+                  onChange={(e) => handleChange('preferredCourier', e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:border-blue-600 outline-none font-medium text-slate-800"
+                >
+                  <option value="Bluedart Air">Bluedart Air (Priority)</option>
+                  <option value="Delhivery Surface">Delhivery Surface (Economy)</option>
+                  <option value="Shadowfax Express">Shadowfax (Hyperlocal)</option>
+                  <option value="DTDC Express">DTDC Express (Pan-India)</option>
+                </select>
               </FormField>
 
-              <FormField label="Width (cm)">
-                <input
-                  type="number"
-                  value={formData.dimensionsWidth}
-                  onChange={(e) => handleChange('dimensionsWidth', e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs focus:border-blue-600 outline-none"
-                />
-              </FormField>
-
-              <FormField label="Height (cm)">
-                <input
-                  type="number"
-                  value={formData.dimensionsHeight}
-                  onChange={(e) => handleChange('dimensionsHeight', e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs focus:border-blue-600 outline-none"
-                />
+              <FormField label="Dispatch Priority Mode">
+                <select
+                  value={formData.dispatchMode}
+                  onChange={(e) => handleChange('dispatchMode', e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:border-blue-600 outline-none font-medium text-slate-800"
+                >
+                  <option value="Express Air">Express Air (Same-day handover)</option>
+                  <option value="Surface Standard">Surface Standard (24hr SLA)</option>
+                </select>
               </FormField>
             </div>
-
-            <FormField label="Assigned Pickup Warehouse">
-              <select
-                value={formData.warehouse}
-                onChange={(e) => handleChange('warehouse', e.target.value)}
-                className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:border-blue-600 outline-none font-medium text-slate-800"
-              >
-                {warehouses.map((w) => (
-                  <option key={w} value={w}>{w}</option>
-                ))}
-              </select>
-            </FormField>
           </div>
 
-          {/* Section 4: Media & Image Preview */}
           <div className="space-y-3 pt-3 border-t border-slate-100">
             <h3 className="text-xs font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
               <ImageIcon size={13} /> 4. Product Media & Thumbnail
@@ -291,7 +259,7 @@ export default function ProductModal({ isOpen, onClose, onSubmit, initialData, c
 
             <div className="flex gap-4 items-start">
               <div className="flex-1">
-                <FormField label="Image URL" error={touched.thumbnail && errors.thumbnail} hint="Direct CDN Link">
+                <FormField label="Image URL" error={touched.thumbnail && errors.thumbnail} hint="Direct CDN link">
                   <input
                     type="url"
                     placeholder="https://..."
@@ -335,7 +303,7 @@ export default function ProductModal({ isOpen, onClose, onSubmit, initialData, c
             disabled={!isFormValid}
             className="px-5 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:hover:bg-orange-500 text-white font-bold text-xs transition shadow-md shadow-orange-500/20 cursor-pointer disabled:cursor-not-allowed"
           >
-            {initialData ? 'Update Listing' : 'Publish SKU'}
+            {initialData ? 'Update Product' : 'Publish Product'}
           </button>
         </div>
       </div>

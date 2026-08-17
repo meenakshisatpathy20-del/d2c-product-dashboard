@@ -8,6 +8,7 @@ import {
 } from '../services/productService';
 
 const WAREHOUSES = ['Bhiwandi Hub (MH)', 'Gurugram Facility (HR)', 'Bengaluru Depot (KA)', 'Kolkata Fulfillment (WB)'];
+const COURIERS = ['Bluedart Air', 'Delhivery Surface', 'Shadowfax Express', 'DTDC Express'];
 
 export function useProducts(limit = 8) {
   const [products, setProducts] = useState([]);
@@ -53,28 +54,24 @@ export function useProducts(limit = 8) {
     loadTaxonomy();
   }, []);
 
-  const enrichProduct = (p, index) => {
-    const declaredWeight = (0.2 + ((p.id * 17) % 25) / 10).toFixed(2);
-    const hasDiscrepancy = p.id % 4 === 0;
-    const actualWeight = hasDiscrepancy ? (parseFloat(declaredWeight) + 0.65).toFixed(2) : declaredWeight;
+  const enrichProduct = (p) => {
     const warehouse = WAREHOUSES[p.id % WAREHOUSES.length];
+    const preferredCourier = COURIERS[p.id % COURIERS.length];
     const status = p.id % 7 === 0 ? 'Draft' : p.id % 11 === 0 ? 'Inactive' : 'Published';
     
+    const hasNDR = p.id % 6 === 0;
+    const ndrReason = hasNDR ? (p.id % 2 === 0 ? 'Customer Unavailable' : 'Incomplete Address') : null;
+
     return {
       ...p,
       priceINR: Math.round((p.price || 10) * 83),
       discountPercentage: p.discountPercentage || 12,
-      weight: declaredWeight,
-      actualWeight,
-      hasDiscrepancy,
-      dimensions: {
-        length: 15 + (p.id % 10),
-        width: 10 + (p.id % 5),
-        height: 5 + (p.id % 8)
-      },
       warehouse,
+      preferredCourier,
+      dispatchMode: p.id % 2 === 0 ? 'Express Air' : 'Surface Standard',
       status,
-      missingImage: !p.thumbnail || p.thumbnail.includes('placeholder'),
+      ndrStatus: hasNDR,
+      ndrReason,
       sku: p.sku || `SKU-${10000 + p.id}`
     };
   };
@@ -122,17 +119,17 @@ export function useProducts(limit = 8) {
         setProducts((prev) =>
           prev.map((item) => (item.id === editingId ? { ...item, ...formData, priceINR: formData.priceINR } : item))
         );
-        showToast(`Listing for "${formData.title}" successfully updated`);
+        showToast(`Product "${formData.title}" updated successfully`);
       } else {
         const res = await apiAddProduct(formData);
         const newEnriched = enrichProduct({ ...res, id: Date.now(), ...formData });
         setProducts((prev) => [newEnriched, ...prev]);
         setTotal((prev) => prev + 1);
-        showToast(`New SKU "${formData.title}" published to marketplace`);
+        showToast(`Product "${formData.title}" published successfully`);
       }
       return true;
     } catch (err) {
-      showToast(err.message || 'Failed to save product listing', 'error');
+      showToast(err.message || 'Failed to save product', 'error');
       return false;
     }
   };
@@ -140,35 +137,38 @@ export function useProducts(limit = 8) {
   const removeProduct = async (id) => {
     const previousProducts = [...products];
     const previousTotal = total;
-    const targetProduct = products.find((p) => p.id === id);
 
     setProducts((prev) => prev.filter((p) => p.id !== id));
     setTotal((prev) => Math.max(0, prev - 1));
 
     try {
       await apiDeleteProduct(id);
-      showToast(`SKU delisted successfully`);
+      showToast(`Product removed successfully`);
     } catch (err) {
       setProducts(previousProducts);
       setTotal(previousTotal);
-      showToast(`Failed to delist ${targetProduct?.title || 'product'}. Changes rolled back.`, 'error');
+      showToast(`Failed to delete product. Changes rolled back.`, 'error');
     }
   };
 
   const bulkRemove = (selectedIds) => {
-    const previousProducts = [...products];
-    const previousTotal = total;
-
     setProducts((prev) => prev.filter((p) => !selectedIds.includes(p.id)));
     setTotal((prev) => Math.max(0, prev - selectedIds.length));
-    showToast(`Successfully delisted ${selectedIds.length} selected SKUs`);
+    showToast(`Removed ${selectedIds.length} products`);
   };
 
   const bulkWarehouseReassign = (selectedIds, newWarehouse) => {
     setProducts((prev) =>
       prev.map((p) => (selectedIds.includes(p.id) ? { ...p, warehouse: newWarehouse } : p))
     );
-    showToast(`Updated pickup hub to ${newWarehouse} for ${selectedIds.length} items`);
+    showToast(`Updated pickup hub to ${newWarehouse}`);
+  };
+
+  const resolveNDR = (id, action) => {
+    setProducts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, ndrStatus: false, ndrReason: null } : p))
+    );
+    showToast(`NDR Action: "${action}" submitted to courier network`);
   };
 
   return {
@@ -190,6 +190,7 @@ export function useProducts(limit = 8) {
     removeProduct,
     bulkRemove,
     bulkWarehouseReassign,
+    resolveNDR,
     retry: loadData,
     toast,
     clearToast,

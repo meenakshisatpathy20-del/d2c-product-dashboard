@@ -11,15 +11,14 @@ import {
   Truck, 
   Download, 
   Upload, 
-  AlertTriangle, 
+  AlertCircle, 
   Layers, 
   Tag, 
   Copy, 
   Check, 
   Sparkles,
-  ShoppingBag,
   Flame,
-  ArrowRight
+  FileText
 } from 'lucide-react';
 
 import { useProducts } from './hooks/useProducts';
@@ -31,6 +30,8 @@ import ActionNeededPanel from './components/ActionNeededPanel';
 import Toast from './components/Toast';
 import ConfirmDialog from './components/ConfirmDialog';
 import TrackingModal from './components/TrackingModal';
+import RateCalculatorModal from './components/RateCalculatorModal';
+import ManifestModal from './components/ManifestModal';
 
 export default function App() {
   const {
@@ -52,6 +53,7 @@ export default function App() {
     removeProduct,
     bulkRemove,
     bulkWarehouseReassign,
+    resolveNDR,
     retry,
     toast,
     clearToast,
@@ -63,6 +65,8 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [trackingProduct, setTrackingProduct] = useState(null);
+  const [calculatingProduct, setCalculatingProduct] = useState(null);
+  const [isManifestOpen, setIsManifestOpen] = useState(false);
 
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
@@ -95,7 +99,7 @@ export default function App() {
   const handleCopyCoupon = (code) => {
     navigator.clipboard.writeText(code);
     setCopiedCoupon(code);
-    showToast(`Coupon code "${code}" copied to clipboard!`);
+    showToast(`Coupon code "${code}" copied!`);
     setTimeout(() => setCopiedCoupon(''), 3000);
   };
 
@@ -104,9 +108,9 @@ export default function App() {
     if (pincode.length === 6 && !isNaN(pincode)) {
       setPincodeStatus({
         valid: true,
-        message: `Pincode ${pincode} Eligible: Next-Day Express Delivery Active (Bluedart/Delhivery)`
+        message: `Pincode ${pincode} Serviceable: Bluedart Air Express & Delhivery Active`
       });
-      showToast(`Pincode ${pincode} verified for 24hr delivery`);
+      showToast(`Pincode ${pincode} verified for next-day dispatch`);
     } else {
       setPincodeStatus({
         valid: false,
@@ -137,7 +141,7 @@ export default function App() {
       Brand: p.brand,
       Category: p.category,
       PriceINR: p.priceINR,
-      WeightKg: p.weight,
+      Courier: p.preferredCourier,
       Warehouse: p.warehouse
     }));
 
@@ -148,19 +152,21 @@ export default function App() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `D2CMall_Catalog_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `D2CMall_Products_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
-    showToast('Catalog exported to CSV successfully');
+    showToast('Product catalog exported to CSV successfully');
   };
 
   const handleCSVImportSimulate = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    showToast(`Bulk imported file: "${file.name}" (12 new SKUs mapped)`);
+    showToast(`Imported "${file.name}" (12 products mapped)`);
   };
+
+  const selectedProductList = products.filter((p) => selectedIds.includes(p.id));
 
   const formattedDate = currentTime.toLocaleDateString('en-IN', {
     weekday: 'short',
@@ -178,7 +184,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col font-sans">
-      {/* 1. Live Top Bar */}
       <div className="bg-slate-900 text-slate-300 text-xs px-4 py-2 border-b border-slate-800">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-4 text-[11px]">
@@ -187,7 +192,7 @@ export default function App() {
             </span>
             <span className="text-slate-600 hidden sm:inline">|</span>
             <span className="text-amber-400 font-semibold flex items-center gap-1">
-              <AlertTriangle size={12} /> 2 Courier Weight Disputes
+              <AlertCircle size={12} /> Shiprocket NDR Auto-Sync Active
             </span>
             <span className="text-slate-600 hidden sm:inline">|</span>
             <span className="text-slate-400 flex items-center gap-1">
@@ -205,7 +210,6 @@ export default function App() {
         </div>
       </div>
 
-      {/* 2. Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -218,10 +222,10 @@ export default function App() {
                   D2C<span className="text-orange-500">Mall</span>
                 </span>
                 <span className="text-[10px] font-extrabold px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-md uppercase">
-                  One Stop Lifestyle Shop
+                  Shiprocket Hub
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 font-medium">Direct-to-Consumer Seller & Buyer Ecosystem</p>
+              <p className="text-[11px] text-slate-400 font-medium">Automated Logistics & Multi-Courier Fulfillment</p>
             </div>
           </div>
 
@@ -245,13 +249,12 @@ export default function App() {
               }}
               className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-bold text-xs sm:text-sm transition shadow-md shadow-orange-500/20 active:scale-98 cursor-pointer"
             >
-              <Plus size={16} strokeWidth={3} /> Add SKU
+              <Plus size={16} strokeWidth={3} /> Add Product
             </button>
           </div>
         </div>
       </header>
 
-      {/* 3. Welcome Banner & Pincode Checker Bar */}
       <div className="bg-gradient-to-r from-orange-500 via-amber-500 to-emerald-600 text-white py-4 px-4 shadow-sm">
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3 text-center lg:text-left">
@@ -261,7 +264,7 @@ export default function App() {
             <div>
               <h2 className="text-lg font-black tracking-tight">Welcome to D2C Mall — India's Direct Commerce Portal</h2>
               <p className="text-xs text-orange-100 font-medium">
-                Syncing 100+ Authentic Lifestyle, Fashion & Tech Brands direct from verified manufacturers
+                Integrated with Shiprocket Courier Engine for automatic AWB allocation and next-day deliveries
               </p>
             </div>
           </div>
@@ -271,7 +274,7 @@ export default function App() {
             <input
               type="text"
               maxLength={6}
-              placeholder="Check Delivery Pincode..."
+              placeholder="Check Courier Pincode..."
               value={pincode}
               onChange={(e) => setPincode(e.target.value)}
               className="bg-transparent text-white placeholder-orange-100 text-xs px-2 py-1 outline-none w-36 sm:w-44 font-semibold"
@@ -292,7 +295,6 @@ export default function App() {
         )}
       </div>
 
-      {/* 4. Live Offers / Coupon Strip (Zomato / Myntra Style) */}
       <div className="bg-white border-b border-slate-200 py-3 px-4">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs font-black text-slate-800 uppercase tracking-wider shrink-0">
@@ -321,12 +323,10 @@ export default function App() {
         </div>
       </div>
 
-      {/* 5. Main Body */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-5">
-        {/* KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
-            title="Total Active SKUs"
+            title="Total Active Products"
             value={total}
             icon={Package}
             color="blue"
@@ -370,30 +370,25 @@ export default function App() {
           />
 
           <StatCard
-            title="Weight Dispute Flag"
-            value="2 Items"
-            icon={AlertTriangle}
-            color="rose"
-            subtitle="Action required on courier charges"
+            title="Courier Fulfillment SLA"
+            value="98.8%"
+            icon={Truck}
+            color="emerald"
+            subtitle="Next-Day delivery compliance"
           />
         </div>
 
-        {/* Action-Needed Operational Bar */}
         <ActionNeededPanel
           products={products}
-          onSelectProduct={(p) => {
-            setEditingProduct(p);
-            setIsModalOpen(true);
-          }}
+          onResolveNDR={resolveNDR}
         />
 
-        {/* Search & Category Filter */}
         <div className="bg-white border border-slate-200 rounded-xl p-3 flex flex-col md:flex-row gap-3 items-center justify-between shadow-2xs">
           <div className="relative w-full md:w-96">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input
               type="text"
-              placeholder="Search catalog by SKU, title or brand..."
+              placeholder="Search products by name or brand..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-10 pr-4 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-600 transition font-medium"
@@ -417,14 +412,20 @@ export default function App() {
           </div>
         </div>
 
-        {/* Floating Bulk Actions Bar */}
         {selectedIds.length > 0 && (
           <div className="bg-slate-900 text-white px-4 py-2.5 rounded-xl flex items-center justify-between text-xs animate-in fade-in slide-in-from-top-2 duration-150">
             <span className="font-bold text-orange-400">
-              {selectedIds.length} {selectedIds.length === 1 ? 'item' : 'items'} selected
+              {selectedIds.length} {selectedIds.length === 1 ? 'product' : 'products'} selected
             </span>
 
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsManifestOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1 rounded-lg transition cursor-pointer flex items-center gap-1"
+              >
+                <FileText size={13} /> Generate Manifest
+              </button>
+
               <select
                 onChange={(e) => {
                   if (e.target.value) {
@@ -434,7 +435,7 @@ export default function App() {
                 }}
                 className="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1 text-xs outline-none cursor-pointer"
               >
-                <option value="">Move to Warehouse...</option>
+                <option value="">Reassign Warehouse...</option>
                 {warehouses.map((w) => (
                   <option key={w} value={w}>{w}</option>
                 ))}
@@ -444,13 +445,12 @@ export default function App() {
                 onClick={() => setIsBulkDeleteConfirmOpen(true)}
                 className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-3 py-1 rounded-lg transition cursor-pointer"
               >
-                Delist Selected
+                Delete Selected
               </button>
             </div>
           </div>
         )}
 
-        {/* Reusable Data Table with Live Track trigger */}
         <DataTable
           products={products}
           loading={loading}
@@ -462,6 +462,7 @@ export default function App() {
           }}
           onDelete={(id) => setConfirmDeleteId(id)}
           onTrack={(product) => setTrackingProduct(product)}
+          onCalculateRate={(product) => setCalculatingProduct(product)}
           sortBy={sortBy}
           order={order}
           onSort={handleSort}
@@ -470,7 +471,6 @@ export default function App() {
           onToggleSelectAll={handleToggleSelectAll}
         />
 
-        {/* Server-Side Pagination */}
         <Pagination
           total={total}
           limit={8}
@@ -479,14 +479,25 @@ export default function App() {
         />
       </main>
 
-      {/* Tracking Modal */}
+      <ManifestModal
+        isOpen={isManifestOpen}
+        onClose={() => setIsManifestOpen(false)}
+        selectedProducts={selectedProductList}
+        onDownload={() => showToast(`Manifest generated for ${selectedIds.length} orders`)}
+      />
+
+      <RateCalculatorModal
+        isOpen={Boolean(calculatingProduct)}
+        onClose={() => setCalculatingProduct(null)}
+        product={calculatingProduct}
+      />
+
       <TrackingModal
         isOpen={Boolean(trackingProduct)}
         onClose={() => setTrackingProduct(null)}
         product={trackingProduct}
       />
 
-      {/* Product Create / Edit Modal */}
       <ProductModal
         isOpen={isModalOpen}
         onClose={() => {
@@ -505,12 +516,11 @@ export default function App() {
         warehouses={warehouses}
       />
 
-      {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={Boolean(confirmDeleteId)}
-        title="Delist SKU from Marketplace?"
-        message="This item will immediately be removed from the active inventory catalog across courier hubs."
-        confirmLabel="Delist Item"
+        title="Remove Product from Store?"
+        message="This product will immediately be delisted from all storefront channels and warehouse pickup lists."
+        confirmLabel="Delete Product"
         isDestructive
         onCancel={() => setConfirmDeleteId(null)}
         onConfirm={() => {
@@ -519,12 +529,11 @@ export default function App() {
         }}
       />
 
-      {/* Bulk Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={isBulkDeleteConfirmOpen}
-        title={`Delist ${selectedIds.length} Selected SKUs?`}
-        message="Are you sure you want to delist all selected products? This action updates your live marketplace channel instantly."
-        confirmLabel={`Delist ${selectedIds.length} Items`}
+        title={`Delete ${selectedIds.length} Selected Products?`}
+        message="Are you sure you want to delete all selected items? This updates your live store immediately."
+        confirmLabel={`Delete ${selectedIds.length} Products`}
         isDestructive
         onCancel={() => setIsBulkDeleteConfirmOpen(false)}
         onConfirm={() => {
@@ -534,7 +543,6 @@ export default function App() {
         }}
       />
 
-      {/* Toast Notification Container */}
       <Toast toast={toast} onClose={clearToast} />
     </div>
   );
